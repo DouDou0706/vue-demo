@@ -30,6 +30,8 @@ exports.add = function (req, res) {
   req.body.id = uuid().substr(0, 8);
   req.body.author = db.get('session.username').value();
   req.body.ctime = Date.now();
+  req.body.likeCount = 0;
+  req.body.likedBy = [];
   
   res.ajaxReturn(
     db.get('msgs').push(req.body).last().value()
@@ -76,4 +78,50 @@ exports.remove = function (req, res) {
 
   if (target) return res.ajaxReturn(target);
   res.ajaxReturn(false, { errMsg: '删除失败' });
+};
+
+// POST /msg/:msgId/like
+exports.like = function (req, res) {
+  var username = db.get('session.username').value();
+  if (!username) {
+    return res.ajaxReturn(false, { errMsg: '请先登录' });
+  }
+
+  var msgId = req.params.msgId;
+  var msg_ = db.get('msgs').find({ id: msgId });
+  var msg = msg_.value();
+
+  if (!msg) {
+    return res.ajaxReturn(false, { errMsg: '留言不存在' });
+  }
+
+  var isLiked = msg.likedBy.indexOf(username) !== -1;
+  
+  if (isLiked) {
+    // 取消点赞
+    msg_.update('likedBy', function (likedBy) {
+      return likedBy.filter(function (user) {
+        return user !== username;
+      });
+    }).value();
+    msg_.update('likeCount', function (count) {
+      return count - 1;
+    }).value();
+  } else {
+    // 点赞
+    msg_.update('likedBy', function (likedBy) {
+      return likedBy.concat(username);
+    }).value();
+    msg_.update('likeCount', function (count) {
+      return count + 1;
+    }).value();
+  }
+
+  // 返回更新后的完整留言数据
+  var updatedMsg = msg_.value();
+  res.ajaxReturn({
+    isLiked: !isLiked,
+    likeCount: updatedMsg.likeCount,
+    msg: updatedMsg
+  });
 };

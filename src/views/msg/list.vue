@@ -35,11 +35,15 @@
             <small class="list-group-item-text">
               {{ msg.content | cutLongText 20 }}
             </small>
-            <opt-btn-group class="pull-right btn-group-xs" :msg="msg">
+            <div class="pull-right btn-group-xs">
               <a v-link="`/msg/detail/${msg.id}`" class="btn btn-default">
                 <i class="fa fa-search-plus"></i>
               </a>
-            </opt-btn-group>
+              <button class="btn btn-default" @click="toggleLike(msg)" :class="{ 'btn-danger': isLiked(msg) }" :disabled="!$root.userData">
+                <i class="fa" :class="isLiked(msg) ? 'fa-heart' : 'fa-heart-o'"></i>
+                <span class="m-l-5">{{ msg.likeCount || 0 }}</span>
+              </button>
+            </div>
           </li>
         </ul>
 
@@ -64,13 +68,12 @@
 import Pagination from '@/components/Pagination'
 import LimitSelect from '@/components/Select/LimitSelect'
 import AuthorSelect from './_components/AuthorSelect'
-import OptBtnGroup from './_components/OptBtnGroup'
 import updateQuery from '@/mixins/updateQuery'
 import msgService from '@/services/msgService'
 
 export default {
   mixins: [updateQuery],
-  components: { Pagination, LimitSelect, AuthorSelect, OptBtnGroup },
+  components: { Pagination, LimitSelect, AuthorSelect },
   data: () => ({ total: 0, msgs: [] }),
   route: {
     data () {
@@ -93,6 +96,49 @@ export default {
     REFETCH_LIST () {
       // 触发 URL 变化即可重刷列表
       this.updateQuery({ _: Date.now() })
+    }
+  },
+  methods: {
+    isLiked (msg) {
+      return this.$root.userData && msg.likedBy && msg.likedBy.indexOf(this.$root.userData.username) !== -1
+    },
+    toggleLike (msg) {
+      if (!this.$root.userData) return
+      
+      msgService.like(msg.id)
+        .then((result) => {
+          // 更新本地数据
+          if (result && result.msg) {
+            const updatedMsg = result.msg
+            msg.likedBy = updatedMsg.likedBy
+            msg.likeCount = updatedMsg.likeCount
+            
+            // 触发详情页更新
+            this.$dispatch('LIKE_UPDATED', {
+              msgId: msg.id,
+              isLiked: this.isLiked(msg),
+              likeCount: msg.likeCount
+            })
+          } else {
+            // 重新获取留言数据
+            msgService.fetchById(msg.id)
+              .then((updatedMsg) => {
+                msg.likedBy = updatedMsg.likedBy
+                msg.likeCount = updatedMsg.likeCount
+                
+                this.$dispatch('LIKE_UPDATED', {
+                  msgId: msg.id,
+                  isLiked: this.isLiked(msg),
+                  likeCount: msg.likeCount
+                })
+              })
+          }
+        })
+        .catch((err) => {
+          if (err && err.errMsg) {
+            alert(err.errMsg)
+          }
+        })
     }
   }
 }

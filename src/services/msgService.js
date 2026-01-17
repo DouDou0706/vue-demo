@@ -81,6 +81,18 @@ class MsgService {
     })
   }
 
+  /**
+   * 点赞/取消点赞
+   * @param  {String} msgId
+   * @return {Promise}
+   */
+  toggleLike (msgId) {
+    return xhr({
+      method: 'post',
+      url: `/msg/${msgId}/like`
+    })
+  }
+
 }
 
 // 实例化后导出，全局单例

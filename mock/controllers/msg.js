@@ -30,6 +30,8 @@ exports.add = function (req, res) {
   req.body.id = uuid().substr(0, 8);
   req.body.author = db.get('session.username').value();
   req.body.ctime = Date.now();
+  req.body.likeCount = 0;
+  req.body.likedBy = [];
   
   res.ajaxReturn(
     db.get('msgs').push(req.body).last().value()
@@ -76,4 +78,40 @@ exports.remove = function (req, res) {
 
   if (target) return res.ajaxReturn(target);
   res.ajaxReturn(false, { errMsg: '删除失败' });
+};
+
+// POST /msg/:msgId/like
+exports.like = function (req, res) {
+  var username = db.get('session.username').value();
+  if (!username) {
+    return res.ajaxReturn(false, { errMsg: '请先登录后再点赞' });
+  }
+
+  var target_ = db.get('msgs').find({ id: req.params.msgId });
+  var target = target_.value();
+
+  if (!target) {
+    return res.ajaxReturn(false, { errMsg: '留言不存在' });
+  }
+
+  var likedBy = target.likedBy || [];
+  var likeCount = target.likeCount || 0;
+  var isLiked = likedBy.indexOf(username) !== -1;
+
+  if (isLiked) {
+    likedBy = likedBy.filter(function (user) {
+      return user !== username;
+    });
+    likeCount--;
+  } else {
+    likedBy.push(username);
+    likeCount++;
+  }
+
+  target_.assign({
+    likeCount: likeCount,
+    likedBy: likedBy
+  }).write();
+
+  res.ajaxReturn(target_.value());
 };

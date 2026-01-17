@@ -19,7 +19,9 @@ db.defaults({
       title: <String>,
       content: <String>,
       author: <String>,
-      ctime: <Number:Timestamp>
+      ctime: <Number:Timestamp>,
+      likeCount: <Number>,
+      likedBy: <Array<String>>
     }
   */],
  

@@ -16,6 +16,14 @@
     </div>
     <div class="clearfix">
       <div class="pull-right m-t-5">
+        <button 
+          class="btn btn-default btn-sm" 
+          :class="{ 'btn-primary': isLiked }"
+          :disabled="!$root.userData"
+          @click="handleLike">
+          <i class="fa" :class="isLiked ? 'fa-heart' : 'fa-heart-o'"></i>
+          <span class="badge">{{ msg.likeCount || 0 }}</span>
+        </button>
         <opt-btn-group
           :msg="msg" :auto-jump="true">
         </opt-btn-group>
@@ -26,6 +34,7 @@
 <script>
 import OptBtnGroup from './_components/OptBtnGroup'
 import autoLoadByParams from './_mixins/autoLoadByParams'
+import msgService from '@/services/msgService'
 
 export default {
   mixins: [autoLoadByParams],
@@ -37,6 +46,35 @@ export default {
       const { userData } = this.$root
       if (!author || !userData) return
       return author === userData.username
+    },
+    isLiked () {
+      const { userData } = this.$root
+      if (!userData || !this.msg.likedBy) return false
+      return this.msg.likedBy.indexOf(userData.username) !== -1
+    }
+  },
+  methods: {
+    handleLike () {
+      const { userData } = this.$root
+      if (!userData) {
+        $.toast({
+          heading: '提示',
+          text: '请先登录后再点赞',
+          icon: 'info',
+          stack: false
+        })
+        return
+      }
+      msgService.like(this.msg.id).then(updatedMsg => {
+        this.msg = updatedMsg
+      }).catch(err => {
+        $.toast({
+          heading: '操作失败',
+          text: err.msg || '点赞失败，请重试',
+          icon: 'error',
+          stack: false
+        })
+      })
     }
   }
 }

@@ -11,6 +11,7 @@ var msgCtrls = require('../controllers/msg'),
   GET     /msg/:msgId       获取指定 ID 的留言信息
   PUT     /msg/:msgId       更新指定 ID 的留言信息
   DELETE  /msg/:msgId       删除指定 ID 的留言信息
+  POST    /msg/:msgId/like  点赞/取消点赞留言
 
   GET     /auth/checkLogin  检测用户是否已经登录
   POST    /auth/login       登录
@@ -44,6 +45,11 @@ module.exports = [{
   method: 'DELETE',
   middlewares: [interceptor.NEED_AUTH],
   handler: msgCtrls.remove
+}, {
+  path: '/msg/:msgId/like',
+  method: 'POST',
+  middlewares: [interceptor.NEED_AUTH],
+  handler: msgCtrls.like
 }, {
   path: '/auth/checkLogin',
   method: 'GET',

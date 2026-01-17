@@ -35,11 +35,21 @@
             <small class="list-group-item-text">
               {{ msg.content | cutLongText 20 }}
             </small>
-            <opt-btn-group class="pull-right btn-group-xs" :msg="msg">
-              <a v-link="`/msg/detail/${msg.id}`" class="btn btn-default">
-                <i class="fa fa-search-plus"></i>
-              </a>
-            </opt-btn-group>
+            <div class="pull-right btn-group-xs">
+              <button 
+                class="btn btn-default" 
+                :class="{ 'btn-primary': isLiked(msg) }"
+                :disabled="!$root.userData"
+                @click.stop="handleLike(msg)">
+                <i class="fa" :class="isLiked(msg) ? 'fa-heart' : 'fa-heart-o'"></i>
+                <span class="badge">{{ msg.likeCount || 0 }}</span>
+              </button>
+              <opt-btn-group class="btn-group" :msg="msg">
+                <a v-link="`/msg/detail/${msg.id}`" class="btn btn-default">
+                  <i class="fa fa-search-plus"></i>
+                </a>
+              </opt-btn-group>
+            </div>
           </li>
         </ul>
 
@@ -82,6 +92,41 @@ export default {
         })
     }
   },
+  methods: {
+    isLiked (msg) {
+      const { userData } = this.$root
+      if (!userData || !msg.likedBy) return false
+      return msg.likedBy.indexOf(userData.username) !== -1
+    },
+    handleLike (msg) {
+      const { userData } = this.$root
+      if (!userData) {
+        $.toast({
+          heading: '提示',
+          text: '请先登录后再点赞',
+          icon: 'info',
+          stack: false
+        })
+        return
+      }
+      console.log('点赞请求:', msg.id, userData.username)
+      msgService.like(msg.id).then(updatedMsg => {
+        console.log('点赞成功:', updatedMsg)
+        const index = this.msgs.findIndex(m => m.id === msg.id)
+        if (index !== -1) {
+          this.$set(this.msgs, index, updatedMsg)
+        }
+      }).catch(err => {
+        console.error('点赞失败:', err)
+        $.toast({
+          heading: '操作失败',
+          text: err.msg || '点赞失败，请重试',
+          icon: 'error',
+          stack: false
+        })
+      })
+    }
+  },
   filters: {
     cutLongText (txt, limit = 10) {
       return txt.length > limit
@@ -91,7 +136,6 @@ export default {
   },
   events: {
     REFETCH_LIST () {
-      // 触发 URL 变化即可重刷列表
       this.updateQuery({ _: Date.now() })
     }
   }

@@ -45,6 +45,11 @@ module.exports = [{
   middlewares: [interceptor.NEED_AUTH],
   handler: msgCtrls.remove
 }, {
+  path: '/msg/:msgId/like',
+  method: 'POST',
+  middlewares: [interceptor.NEED_AUTH],
+  handler: msgCtrls.toggleLike
+}, {
   path: '/auth/checkLogin',
   method: 'GET',
   handler: authCtrls.checkLogin

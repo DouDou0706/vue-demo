@@ -30,10 +30,44 @@ exports.add = function (req, res) {
   req.body.id = uuid().substr(0, 8);
   req.body.author = db.get('session.username').value();
   req.body.ctime = Date.now();
+  req.body.likeCount = 0;
+  req.body.likedBy = [];
   
   res.ajaxReturn(
     db.get('msgs').push(req.body).last().value()
   );
+};
+
+// POST /msg/:msgId/like
+exports.toggleLike = function (req, res) {
+  var username = db.get('session.username').value();
+  var target_ = db.get('msgs').find({ id: req.params.msgId });
+  var target = target_.value();
+  
+  if (!target) {
+    return res.ajaxReturn(false, { errMsg: '不存在该留言信息' });
+  }
+  
+  var likedBy = target.likedBy || [];
+  var likeCount = target.likeCount || 0;
+  var hasLiked = likedBy.indexOf(username) !== -1;
+  
+  if (hasLiked) {
+    likedBy.splice(likedBy.indexOf(username), 1);
+    likeCount--;
+  } else {
+    likedBy.push(username);
+    likeCount++;
+  }
+  
+  target_.assign({ likedBy: likedBy, likeCount: likeCount }).value();
+  
+  res.ajaxReturn({
+    id: target.id,
+    likeCount: likeCount,
+    likedBy: likedBy,
+    hasLiked: !hasLiked
+  });
 };
 
 // GET /msg/authors

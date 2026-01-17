@@ -35,6 +35,19 @@
             <small class="list-group-item-text">
               {{ msg.content | cutLongText 20 }}
             </small>
+            <div class="m-t-10">
+              <button 
+                v-if="$root.userData"
+                @click="handleLike(msg)"
+                :class="['btn', 'btn-xs', getLikeButtonClass(msg)]">
+                <i :class="['fa', msg.likedBy && msg.likedBy.indexOf($root.userData.username) !== -1 ? 'fa-heart' : 'fa-heart-o']"></i>
+                {{ msg.likeCount || 0 }}
+              </button>
+              <span v-else class="text-muted">
+                <i class="fa fa-heart-o"></i>
+                {{ msg.likeCount || 0 }}
+              </span>
+            </div>
             <opt-btn-group class="pull-right btn-group-xs" :msg="msg">
               <a v-link="`/msg/detail/${msg.id}`" class="btn btn-default">
                 <i class="fa fa-search-plus"></i>
@@ -89,10 +102,33 @@ export default {
         : txt
     }
   },
+  methods: {
+    handleLike (msg) {
+      msgService.toggleLike(msg.id)
+        .then(({ likeCount, likedBy }) => {
+          msg.likeCount = likeCount
+          msg.likedBy = likedBy
+        })
+        .catch(err => {
+          console.error('点赞失败:', err)
+        })
+    },
+    getLikeButtonClass (msg) {
+      const hasLiked = msg.likedBy && msg.likedBy.indexOf(this.$root.userData.username) !== -1
+      return hasLiked ? 'btn-danger' : 'btn-default'
+    }
+  },
   events: {
     REFETCH_LIST () {
       // 触发 URL 变化即可重刷列表
       this.updateQuery({ _: Date.now() })
+    },
+    LIKE_UPDATED (data) {
+      const msg = this.msgs.find(m => m.id === data.id)
+      if (msg) {
+        msg.likeCount = data.likeCount
+        msg.likedBy = data.likedBy
+      }
     }
   }
 }
